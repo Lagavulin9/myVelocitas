@@ -18,6 +18,9 @@ import asyncio
 import json
 import logging
 import signal
+import os
+
+from logging.handlers import TimedRotatingFileHandler
 
 from vehicle import Vehicle, vehicle  # type: ignore
 from velocitas_sdk.util.log import (  # type: ignore
@@ -27,11 +30,25 @@ from velocitas_sdk.util.log import (  # type: ignore
 from velocitas_sdk.vdb.reply import DataPointReply
 from velocitas_sdk.vehicle_app import VehicleApp, subscribe_topic
 
+SPEED_LOG_PATH = "logs/vehicle/speed.log"
+SPEED_LOGGER_NAME = "vehicle/speed"
+SPEED_LOG_FORMAT = "%(asctime)s [%(name)s]- %(message)s"
+
 # Configure the VehicleApp logger with the necessary log config and level.
 logging.setLogRecordFactory(get_opentelemetry_log_factory())
 logging.basicConfig(format=get_opentelemetry_log_format())
 logging.getLogger().setLevel("DEBUG")
 logger = logging.getLogger(__name__)
+
+# to log to file
+os.makedirs(os.path.dirname(SPEED_LOG_PATH), exist_ok=True)
+speedLogHandler = TimedRotatingFileHandler(
+    filename=SPEED_LOG_PATH, when="s", interval=60, backupCount=5, encoding="UTF-8"
+)
+speedLogHandler.setFormatter(logging.Formatter(SPEED_LOG_FORMAT))
+SpeedLogger = logging.getLogger(SPEED_LOGGER_NAME)
+SpeedLogger.addHandler(speedLogHandler)
+SpeedLogger.setLevel("INFO")
 
 GET_SPEED_REQUEST_TOPIC = "sampleapp/getSpeed"
 GET_SPEED_RESPONSE_TOPIC = "sampleapp/getSpeed/response"
@@ -73,13 +90,16 @@ class SampleApp(VehicleApp):
         # the same callback.
         vehicle_speed = data.get(self.Vehicle.Speed).value
 
-        # Do anything with the received value.
-        # Example:
-        # - Publishes current speed to MQTT Topic (i.e. DATABROKER_SUBSCRIPTION_TOPIC).
-        await self.publish_event(
-            DATABROKER_SUBSCRIPTION_TOPIC,
-            json.dumps({"speed": vehicle_speed}),
-        )
+        SpeedLogger.info("vehicle_speed %s", vehicle_speed)
+
+        # this pa
+        # # Do anything with the received value.
+        # # Example:
+        # # - Publishes current speed to MQTT Topic (i.e. DATABROKER_SUBSCRIPTION_TOPIC)
+        # await self.publish_event(
+        #     DATABROKER_SUBSCRIPTION_TOPIC,
+        #     json.dumps({"speed": vehicle_speed}),
+        # )
 
     @subscribe_topic(GET_SPEED_REQUEST_TOPIC)
     async def on_get_speed_request_received(self, data: str) -> None:
