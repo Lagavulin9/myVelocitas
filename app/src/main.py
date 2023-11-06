@@ -17,9 +17,8 @@
 import asyncio
 import json
 import logging
-import signal
 import os
-
+import signal
 from logging.handlers import TimedRotatingFileHandler
 
 from vehicle import Vehicle, vehicle  # type: ignore
